@@ -6,6 +6,8 @@
  * @copyright 2023 Cimaron Shanahan
  * @license   MIT
  */
+"use strict";
+
 
 const drivers = {};
 
@@ -13,40 +15,98 @@ const drivers = {};
 class NesDriver {
 
 	/**
-	 * @var string
+	 * @type {string}
 	 */
 	name = "";
 
 	/**
-	 * @var function
+	 * @type {function}
 	 */
-	nmiHandler;
+	handlers;
 
 	/**
-	 * @var string
+	 * @type {boolean}
 	 */
-	state = 'paused';
-
+	state = 0;
 
 	/**
-	 * Constructor
+	 * @type {number}
 	 */
-	constructor() {
+	nextFrame = 0;
+
+	/**
+	 * @constructor
+	 *
+	 * @param {Object} config - Configuration parameters
+	 * @param {ArrayBuffer} config.buffer
+	 * @param {function}    [config.interrupt]
+	 * @param {function}    [config.frame]
+	 */
+	constructor(config) {
+
+		this.width = 256;
+		this.height = 240;
+
+		this.buffer = config.buffer;
+
+		this.handlers = {
+			interrupt : (config.interrupt || function() {}),
+			frame     : (config.frame     || function() {}),
+		};
+	}
+
+	/**
+	 * Reset device
+	 */
+	reset() {
+		this.state = 1;
+	}
+
+	/**
+	 * Start device
+	 */
+	start() {
+		this.state = 1;
+
+		if (!this.nextFrame) {
+			this.nextFrame = window.requestAnimationFrame(this.frame.bind(this));
+		}
+	}
+
+	/**
+	 * Stop device
+	 */
+	stop() {
+		this.state = 0;
+
+		window.cancelAnimationFrame(this.nextFrame);
+
+		this.nextFrame = 0;
+	}
+
+	/**
+	 * Schedule and run frame
+	 */
+	frame() {
+
+		if (this.state == 1) {
+			this.nextFrame = window.requestAnimationFrame(this.frame.bind(this));
+		}
 	}
 
 	/**
 	 * Run n clocks
 	 *
-	 * @param   int   n
+	 * @param {number} n - Integer
 	 *
-	 * @return  int
+	 * @returns {number} Number of clocks ran
 	 */
 	tick(n) {
 		n = (n || 1)|0;
 
 		/*
 		run device clock n times
-		checking NMI state each time
+		checking interrupt state each time
 		*/
 
 		return n;
@@ -55,9 +115,9 @@ class NesDriver {
 	/**
 	 * Stub read
 	 *
-	 * @param   uint16   addr
+	 * @param {number} addr - Uint16 address
 	 *
-	 * @return  uint8
+	 * @returns {number} Uint8 value
 	 */
 	read(addr) {
 		let byte = 0;
@@ -70,10 +130,8 @@ class NesDriver {
 	/**
 	 * Stub write
 	 *
-	 * @param   uint16   addr
-	 * @param   uint8    byte
-	 *
-	 * @return  uint8
+	 * @param {number} addr - Uint16 address
+	 * @param {number} Uint8 value
 	 */
 	write(addr, byte) {
 
@@ -81,21 +139,13 @@ class NesDriver {
 
 		this.tick();
 	}
-
-	/**
-	 * Register NMI callback
-	 *
-	 * @param   function   callback
-	 */
-	registerNmi(callback) {
-		this.nmiHandler = callback;
-	}
 }
 
 /**
  * Register driver
  *
- * @param   NesDriver   driver
+ * @param {string} name
+ * @param {NesDriver} driver
  */
 NesDriver.register = function(name, driver) {
 	drivers[name] = driver;
@@ -104,12 +154,11 @@ NesDriver.register = function(name, driver) {
 /**
  * Get driver (by name if possible)
  *
- * @param   mixed   name
+ * @param {string|null} name
  *
- * @return  NesDriver
+ * @returns {NesDriver}
  */
 NesDriver.getDriver = function(name) {
-
 	return (name && drivers[name]) ? drivers[name] : Object.values(drivers)[0];
 };
 
