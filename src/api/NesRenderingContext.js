@@ -29,30 +29,123 @@ class NesRenderingContext extends EventTarget {
 			mode : 'ntsc'
 		}, contextAttributes || {});
 
+		let width = 256, height = 240;
+
 		const data = internal(this, {
-			contextAttributes : contextAttributes
+			contextAttributes : contextAttributes,
+			screen : new ImageData(width, height),
+			width : width,
+			height: height,
 		});
+
+		this.canvas.width = width;
+		this.canvas.height = height;
+		data.ctx = element.getContext('2d');
 
 		readonly(this, 'region', contextAttributes.mode.toLowerCase() == "pal" ? "pal" : "ntsc");
 
-		readonly(this, 'SCREEN_W', 256);
-		readonly(this, 'SCREEN_H', 240);
+		readonly(this, 'SCREEN_W', width);
+		readonly(this, 'SCREEN_H', height);
 		readonly(this, 'canvas', element);
 
-		data.ctx = element.getContext('2d');
-		data.image = new ImageData(this.SCREEN_W, this.SCREEN_H);
+		//init screen
+		data.screen.data.fill(0xFF000000);
+		data.ctx.putImageData(data.screen, 0, 0);
 
-		this.canvas.width = this.SCREEN_W;
-		this.canvas.height = this.SCREEN_H;
+		//init driver
+		data.driver = initDriver.call(this, contextAttributes);
 
-
-		let dClass = NesDriver.getDriver(contextAttributes.driver);
-		if (!dClass) {
-			throw new Error("WebNes: No drivers registered");
-		}
-
-		data.driver = new dClass();
+		//Dispatch events
+		window.requestAnimationFrame(function() {
+			this.dispatchEvent('ready');
+		}.bind(this));
 	}
+
+	/**
+	 * Reset execution
+	 */
+	reset() {
+		const driver = internal(this).driver;
+		driver.reset();
+	}
+
+	/**
+	 * Pause execution
+	 */
+	pause() {
+		internal(this).driver.stop();
+	}
+
+	/**
+	 * Start execution
+	 */
+	start() {
+		internal(this).driver.start();
+	}
+
+	/**
+	 * Read memory address
+	 *
+	 * @param {number} addr - Uint16 address
+	 *
+	 * @returns {number} - Uint8 value
+	 */
+	read(addr) {
+
+		addr = addr & 0xFFFF;
+
+		return internal(this).driver.read(addr);
+	}
+
+	/**
+	 * Write memory address
+	 *
+	 * @param {number} addr - Uint16 address
+	 * @param {number} - Uint8 value
+	 */
+	write(addr, byte) {
+
+		addr = addr & 0xFFFF;
+		byte = byte & 0xFF;
+
+		internal(this).driver.write(addr, byte);
+	}
+}
+
+
+/**
+ * Create driver
+ *
+ * @param {NesRenderingContext} attr
+ */
+function initDriver(attr) {
+
+	let dClass = NesDriver.getDriver(attr.driver);
+	if (!dClass) {
+		throw new Error("WebNes: No drivers registered");
+	}
+
+	const data = internal(this);
+	const screen = data.screen;
+
+	const driver = new dClass({
+
+		buffer : screen.data.buffer,
+
+		frame : function() {
+			data.ctx.putImageData(screen, 0, 0);
+			this.dispatchEvent('frame');
+		}.bind(this),
+
+		interrupt : this.dispatchEvent.bind(this, 'interrupt')
+	});
+
+	this.rom = new NesRom();
+
+	driver.setRom(this.rom);
+	driver.start();
+
+	return driver;
 }
 
 export default NesRenderingContext;
