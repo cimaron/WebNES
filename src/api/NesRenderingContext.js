@@ -17,39 +17,43 @@ import NesDriver from '../driver/NesDriver.js';
 /**
  * Nes Rendering Context Class
  */
-function NesRenderingContext(element, contextAttributes) {
+class NesRenderingContext extends EventTarget {
 
-	contextAttributes = Object.assign({
-		mode : 'ntsc'
-	}, contextAttributes || {});
+	/**
+	 * @param {HTMLCanvasElement} element
+	 * @param {object} contextAttributes
+	 */
+	constructor(element, contextAttributes) {
 
-	const data = internal(this, {
-		contextAttributes : contextAttributes
-	});
+		contextAttributes = Object.assign({
+			mode : 'ntsc'
+		}, contextAttributes || {});
 
-	readonly(this, 'region', contextAttributes.mode.toLowerCase() == "pal" ? "pal" : "ntsc");
+		const data = internal(this, {
+			contextAttributes : contextAttributes
+		});
 
-	readonly(this, 'SCREEN_W', 256);
-	readonly(this, 'SCREEN_H', 240);
-	readonly(this, 'canvas', element);
+		readonly(this, 'region', contextAttributes.mode.toLowerCase() == "pal" ? "pal" : "ntsc");
 
-	data.ctx = element.getContext('2d');
-	data.image = new ImageData(this.SCREEN_W, this.SCREEN_H);
+		readonly(this, 'SCREEN_W', 256);
+		readonly(this, 'SCREEN_H', 240);
+		readonly(this, 'canvas', element);
 
-	this.canvas.width = this.SCREEN_W;
-	this.canvas.height = this.SCREEN_H;
+		data.ctx = element.getContext('2d');
+		data.image = new ImageData(this.SCREEN_W, this.SCREEN_H);
+
+		this.canvas.width = this.SCREEN_W;
+		this.canvas.height = this.SCREEN_H;
 
 
-	let dClass = NesDriver.getDriver(contextAttributes.driver);
-	if (!dClass) {
-		throw new Error("WebNes: No drivers registered");
+		let dClass = NesDriver.getDriver(contextAttributes.driver);
+		if (!dClass) {
+			throw new Error("WebNes: No drivers registered");
+		}
+
+		data.driver = new dClass();
 	}
-
-	data.driver = new dClass();
-};
-
-Object.assign(NesRenderingContext.prototype, EventTarget);
-
+}
 
 export default NesRenderingContext;
 
