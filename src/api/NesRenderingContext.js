@@ -12,6 +12,7 @@ import { readonly } from '../util/property.js';
 import { internal } from '../util/internal.js';
 import EventTarget from '../util/events.js';
 import NesDriver from '../driver/NesDriver.js';
+import NesRom from './NesRom.js';
 
 
 /**
@@ -62,10 +63,21 @@ class NesRenderingContext extends EventTarget {
 	}
 
 	/**
+	 * Get Rom
+	 *
+	 * @returns {NesRom}
+	 */
+	getRom() {
+		return this.rom;
+	}
+
+	/**
 	 * Reset execution
 	 */
 	reset() {
 		const driver = internal(this).driver;
+
+		driver.setRom(this.rom);
 		driver.reset();
 	}
 

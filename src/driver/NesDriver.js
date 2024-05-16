@@ -8,6 +8,8 @@
  */
 "use strict";
 
+import NesRom from '../api/NesRom.js';
+
 
 const drivers = {};
 
@@ -20,7 +22,12 @@ class NesDriver {
 	name = "";
 
 	/**
-	 * @type {function}
+	 * @type {NesRom}
+	 */
+	rom;
+
+	/**
+	 * @type {object}
 	 */
 	handlers;
 
@@ -53,6 +60,15 @@ class NesDriver {
 			interrupt : (config.interrupt || function() {}),
 			frame     : (config.frame     || function() {}),
 		};
+	}
+
+	/**
+	 * Set ROM
+	 *
+	 * @param   NesRom   rom
+	 */
+	setRom(rom) {
+		this.rom = rom;
 	}
 
 	/**
