@@ -12,6 +12,7 @@ import { readonly } from '../util/property.js';
 import { internal } from '../util/internal.js';
 import EventTarget from '../util/events.js';
 import NesDriver from '../driver/NesDriver.js';
+import NesPPU from './NesPPU.js';
 import NesRom from './NesRom.js';
 
 
@@ -56,10 +57,20 @@ class NesRenderingContext extends EventTarget {
 		//init driver
 		data.driver = initDriver.call(this, contextAttributes);
 
+		//init api objects
+		data.ppu = new NesPPU(data.driver);
+
 		//Dispatch events
 		window.requestAnimationFrame(function() {
 			this.dispatchEvent('ready');
 		}.bind(this));
+	}
+
+	/**
+	 * Get PPU Api Object
+	 */
+	getPPU() {
+		return internal(this).ppu;
 	}
 
 	/**
